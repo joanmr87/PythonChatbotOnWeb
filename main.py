@@ -1,4 +1,3 @@
-import panel as pn
 import os
 import openai
 import sys
@@ -15,16 +14,23 @@ from langchain.memory import ConversationBufferMemory
 from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
 from langchain.vectorstores import DocArrayInMemorySearch
 from langchain.document_loaders import TextLoader, PyPDFLoader
+from fastapi import FastAPI
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import HTMLResponse
+from starlette.middleware.cors import CORSMiddleware
+import uvicorn
 
+# Set up environment
 sys.path.append('../..')
 pn.extension()
-
 load_dotenv(".env")
 
+# Load environment variables
 def load_env_vars():
     _ = load_dotenv(find_dotenv())
     openai.api_key  = os.environ['OPENAI_API_KEY']
 
+# Get model name
 def get_llm_name():
     current_date = datetime.datetime.now().date()
     if current_date < datetime.date(2023, 9, 2):
@@ -33,18 +39,15 @@ def get_llm_name():
         llm_name = "gpt-3.5-turbo"
     return llm_name
 
+# Load necessary variables
 llm_name = get_llm_name()
 print(llm_name)
 
 embedding = OpenAIEmbeddings()
 vectordb = Chroma(embedding_function=embedding)
-
-question = "What are major topics for this class?"
-docs = vectordb.similarity_search(question,k=3)
-len(docs)
-
 llm = ChatOpenAI(model_name=llm_name, temperature=0)
 
+# Define the template for the chat
 template = """Use the following pieces of context to answer the question at the end. If you don't know the answer, just say that you don't know, don't try to make up an answer. Use three sentences maximum. Keep the answer as concise as possible. Always say "thanks for asking!" at the end of the answer. 
 {context}
 Question: {question}
@@ -213,3 +216,23 @@ dashboard = pn.Column(
 # Este es el código que añadimos para servir el panel como una aplicación web.
 if __name__ == "__main__":
     pn.serve(dashboard)
+
+# FastAPI setup
+app = FastAPI()
+
+# Ensure all CORS are allowed (this can be configured for more security)
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+@app.get('/', response_class=HTMLResponse)
+def root():
+    return pn.serve(dashboard, show=False, start=False, port=50999, websocket_origin="*")
+
+# Run the app
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=50999, log_level="info")
