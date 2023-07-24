@@ -1,5 +1,5 @@
 openai==0.27.2
-panel==0.13.2
+panel==1.2.0
 param==1.13.0
 numpy==1.23.5
 pandas==1.5.3
