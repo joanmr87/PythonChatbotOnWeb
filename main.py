@@ -5,8 +5,6 @@ from flask import Flask, request, jsonify
 import os
 import openai
 import sys
-import panel as pn
-import param
 import datetime
 from dotenv import load_dotenv, find_dotenv
 from langchain.vectorstores import Chroma
@@ -91,30 +89,16 @@ def load_db(file, chain_type, k):
         return_generated_question=True,
     )
     return qa 
-class cbfs(param.Parameterized):
-    chat_history = param.List([])
-    answer = param.String("")
-    db_query  = param.String("")
-    db_response = param.List([])
-    
-    def __init__(self,  **params):
-        super(cbfs, self).__init__( **params)
-        self.panels = []
+
+class cbfs:
+    def __init__(self):
+        self.chat_history = []
+        self.answer = ""
+        self.db_query = ""
+        self.db_response = []
         self.loaded_file = r"C:\Users\joanm\Downloads\Patagonian data.pdf"
         self.qa = load_db(self.loaded_file,"stuff", 4)
     
-    def call_load_db(self, count):
-        if count == 0 or file_input.value is None:  # init or no file specified :
-            return pn.pane.Markdown(f"Loaded File: {self.loaded_file}")
-        else:
-            file_input.save("temp.pdf")  # local copy
-            self.loaded_file = file_input.filename
-            button_load.button_style="outline"
-            self.qa = load_db("temp.pdf", "stuff", 4)
-            button_load.button_style="solid"
-        self.clr_history()
-        return pn.pane.Markdown(f"Loaded File: {self.loaded_file}")
-
     def convchain(self, query):
         if not query:
             return {'user': "", 'bot': ""}
@@ -126,41 +110,6 @@ class cbfs(param.Parameterized):
         self.answer = result['answer'] 
 
         return {'user': query, 'bot': self.answer}
-
-
-    @param.depends('db_query ', )
-    def get_lquest(self):
-        if not self.db_query :
-            return pn.Column(
-                pn.Row(pn.pane.Markdown(f"Last question to DB:", styles={'background-color': '#F6F6F6'})),
-                pn.Row(pn.pane.Str("no DB accesses so far"))
-            )
-        return pn.Column(
-            pn.Row(pn.pane.Markdown(f"DB query:", styles={'background-color': '#F6F6F6'})),
-            pn.pane.Str(self.db_query )
-        )
-
-    @param.depends('db_response', )
-    def get_sources(self):
-        if not self.db_response:
-            return 
-        rlist=[pn.Row(pn.pane.Markdown(f"Result of DB lookup:", styles={'background-color': '#F6F6F6'}))]
-        for doc in self.db_response:
-            rlist.append(pn.Row(pn.pane.Str(doc)))
-        return pn.WidgetBox(*rlist, width=600, scroll=True)
-
-    @param.depends('convchain', 'clr_history') 
-    def get_chats(self):
-        if not self.chat_history:
-            return pn.WidgetBox(pn.Row(pn.pane.Str("No History Yet")), width=600, scroll=True)
-        rlist=[pn.Row(pn.pane.Markdown(f"Current Chat History variable", styles={'background-color': '#F6F6F6'}))]
-        for exchange in self.chat_history:
-            rlist.append(pn.Row(pn.pane.Str(exchange)))
-        return pn.WidgetBox(*rlist, width=600, scroll=True)
-
-    def clr_history(self,count=0):
-        self.chat_history = []
-        return
 
 
 load_dotenv(".env")

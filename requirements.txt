@@ -1,8 +1,0 @@
-openai==0.27.2
-panel==1.2.0
-param==1.13.0
-numpy==1.23.5
-pandas==1.5.3
-python-dotenv==0.20.0
-fastapi==0.68.1
-uvicorn==0.15.0
