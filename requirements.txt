@@ -1,0 +1,7 @@
+flask
+openai
+dotenv
+langchain
+numpy
+pandas
+scikit-learn
