@@ -96,8 +96,10 @@ class cbfs:
         self.answer = ""
         self.db_query = ""
         self.db_response = []
-        self.loaded_file = r"C:\Users\joanm\Downloads\Patagonian data.pdf"
+        project_root = os.path.dirname(os.path.abspath(__file__))  # obtén la ruta del directorio raíz
+        self.loaded_file = os.path.join(project_root, "Patagonian_data.pdf")  # únela con el nombre del archivo
         self.qa = load_db(self.loaded_file,"stuff", 4)
+
     
     def convchain(self, query):
         if not query:
