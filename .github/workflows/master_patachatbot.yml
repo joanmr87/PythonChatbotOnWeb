@@ -38,8 +38,8 @@ jobs:
         with:
           name: python-app
           path: |
+            **  # Include all files in the repository
             !.git/**  # Exclude all files under .git
-            **  # Include all other files in the repository
 
   deploy:
     runs-on: ubuntu-latest
