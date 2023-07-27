@@ -116,7 +116,7 @@ class cbfs:
 
 load_dotenv(".env")
 
-cb = cbfs()  # Crear una instancia de tu clase cbfs
+cb = cbfs()
 
 app = Flask(__name__)
 
