@@ -1,4 +1,4 @@
-# chatbot.py
+# app.py
 import os
 from dotenv import load_dotenv
 from flask import Flask, request, jsonify
@@ -119,6 +119,11 @@ load_dotenv(".env")
 cb = cbfs()
 
 app = Flask(__name__)
+
+@app.route('/', methods=['GET'])
+def home():
+    return "Hola Patagonian!"
+
 
 @app.route('/api/convchain', methods=['POST'])
 def convchain():
