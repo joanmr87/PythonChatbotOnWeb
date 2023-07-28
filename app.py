@@ -7,6 +7,10 @@ import openai
 import sys
 import datetime
 from dotenv import load_dotenv, find_dotenv
+import sys
+import pysqlite3 as sqlite3
+sys.modules['sqlite3'] = sqlite3
+
 from langchain.vectorstores import Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
