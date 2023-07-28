@@ -8,5 +8,5 @@ pandas==1.5.3
 scikit-learn==1.2.2
 chromadb==0.4.2
 pysqlite3-binary
-PyPDF2==1.26.0
+pypdf== 3.8.1
 
