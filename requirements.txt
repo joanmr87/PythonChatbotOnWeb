@@ -9,4 +9,5 @@ scikit-learn==1.2.2
 chromadb==0.4.2
 pysqlite3-binary
 pypdf== 3.8.1
+langchain[docarray]
 
