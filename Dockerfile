@@ -25,6 +25,10 @@ COPY . /app
 # Instalar las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Instalar pysqlite3 y reemplazar sqlite3 con pysqlite3
+RUN pip install pysqlite3-binary \
+    && cp -r /usr/local/lib/python3.9/site-packages/pysqlite3 /usr/local/lib/python3.9/site-packages/sqlite3
+
 # Exponer el puerto 5000 (Flask corre en el puerto 5000 por defecto)
 EXPOSE 5000
 
