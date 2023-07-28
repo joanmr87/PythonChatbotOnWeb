@@ -19,8 +19,9 @@ WORKDIR /app
 # Copiar el código de la aplicación al contenedor
 COPY . /app
 
-# Instalar las dependencias del proyecto
-RUN pip install --no-cache-dir -r requirements.txt
+# Instalar las dependencias del proyecto y la nueva versión de sqlite3
+RUN pip install --no-cache-dir -r requirements.txt && \
+    pip install pysqlite3
 
 # Exponer el puerto 5000 (Flask corre en el puerto 5000 por defecto)
 EXPOSE 5000
