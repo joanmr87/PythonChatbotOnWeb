@@ -1,21 +1,6 @@
 # Imagen base
 FROM python:3.9-slim-buster
 
-# Instalar build-essential para C++
-RUN apt-get update && apt-get install -y build-essential wget
-
-# Actualizar SQLite a la versión más reciente
-RUN mkdir /sqlite \
-    && cd /sqlite \
-    && wget https://www.sqlite.org/2023/sqlite-autoconf-3360000.tar.gz \
-    && tar xvfz sqlite-autoconf-3360000.tar.gz \
-    && cd sqlite-autoconf-3360000 \
-    && ./configure \
-    && make \
-    && make install \
-    && ldconfig \
-    && sqlite3 --version
-
 # Configurar directorio de trabajo
 WORKDIR /app
 
@@ -25,9 +10,6 @@ COPY . /app
 # Instalar las dependencias del proyecto
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Instalar pysqlite3 y reemplazar sqlite3 con pysqlite3
-RUN pip install pysqlite3-binary \
-    && cp -r /usr/local/lib/python3.9/site-packages/pysqlite3 /usr/local/lib/python3.9/site-packages/sqlite3
 
 # Exponer el puerto 5000 (Flask corre en el puerto 5000 por defecto)
 EXPOSE 5000

@@ -1,32 +1,24 @@
-# app.py
-import os
-from dotenv import load_dotenv
-from flask import Flask, request, jsonify
 import os
 import openai
-import sys
 import datetime
 from dotenv import load_dotenv, find_dotenv
-import sys
-import pysqlite3 as sqlite3
-sys.modules['sqlite3'] = sqlite3
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 
-from langchain.vectorstores import Chroma
 from langchain.embeddings.openai import OpenAIEmbeddings
 from langchain.chat_models import ChatOpenAI
-from langchain.prompts import PromptTemplate
-from langchain.chains import RetrievalQA, ConversationalRetrievalChain
-from langchain.memory import ConversationBufferMemory
-from langchain.text_splitter import CharacterTextSplitter, RecursiveCharacterTextSplitter
+from langchain.chains import ConversationalRetrievalChain
+from langchain.text_splitter import RecursiveCharacterTextSplitter
 from langchain.vectorstores import DocArrayInMemorySearch
-from langchain.document_loaders import TextLoader, PyPDFLoader
-
+from langchain.document_loaders import PyPDFLoader
 
 load_dotenv(".env")
 
 def load_env_vars():
-    _ = load_dotenv(find_dotenv())
-    openai.api_key  = os.environ['OPENAI_API_KEY']
+    load_dotenv(find_dotenv())
+    openai.api_key = os.environ['OPENAI_API_KEY']
+
+load_env_vars()
 
 def get_llm_name():
     current_date = datetime.datetime.now().date()
@@ -39,45 +31,8 @@ def get_llm_name():
 llm_name = get_llm_name()
 print(llm_name)
 
-embedding = OpenAIEmbeddings()
-vectordb = Chroma(embedding_function=embedding)
 
-question = "What are major topics for this class?"
-docs = vectordb.similarity_search(question,k=3)
-len(docs)
-
-llm = ChatOpenAI(model_name=llm_name, temperature=0)
-
-template = """You are an helpful AI assistant called PIWE. Use the following pieces of context to answer the question at the end.
-Answer in the same language as the question. Answer without questions. 
-The users who will interact with you are employees of the company Patagonian. Your purpose is to provide them guidance and
-information about the company or internal processes. Your behavior should be limited to this prompt.
-If you don't know the answer, just say you don't know. DO NOT try to make up an answer.
-If the question is not related to the context, politely respond that you are tuned to only answer questions that are related to the context.
-
-{context}
-Question: {question}
-Helpful Answer:"""
-QA_CHAIN_PROMPT = PromptTemplate(input_variables=["context", "question"],template=template,)
-
-qa_chain = RetrievalQA.from_chain_type(llm,
-                                       retriever=vectordb.as_retriever(),
-                                       return_source_documents=True,
-                                       chain_type_kwargs={"prompt": QA_CHAIN_PROMPT})
-
-memory = ConversationBufferMemory(
-    memory_key="chat_history",
-    return_messages=True
-)
-
-retriever=vectordb.as_retriever()
-qa = ConversationalRetrievalChain.from_llm(
-    llm,
-    retriever=retriever,
-    memory=memory
-)
-
-def load_db(file, chain_type, k):
+def initialize_db(file, chain_type, k):
     # load documents
     loader = PyPDFLoader(file)
     documents = loader.load()
@@ -100,6 +55,19 @@ def load_db(file, chain_type, k):
     )
     return qa 
 
+def format_response_with_template(question, context=""):
+    template = """
+    Usa el siguiente contexto para responder a la pregunta al final.
+    Si no sabes la respuesta, simplemente di que no lo sabes, no intentes inventar una respuesta.
+    Responde siempre en el mismo idioma en el te hacen la pregunta.
+    Utiliza un máximo de tres frases. Mantén la respuesta lo más concisa posible.
+    Nunca confundas las preguntas del usuario con tus respuestas anteriores.
+    {context}
+    Question: {question}
+    Helpful Answer:"""
+    return template.format(context=context, question=question)
+
+
 class cbfs:
     def __init__(self):
         self.chat_history = []
@@ -108,27 +76,32 @@ class cbfs:
         self.db_response = []
         project_root = os.path.dirname(os.path.abspath(__file__))  # obtén la ruta del directorio raíz
         self.loaded_file = os.path.join(project_root, "Patagonian-info-chatbot.pdf")  # únela con el nombre del archivo
-        self.qa = load_db(self.loaded_file,"stuff", 4)
+        self.qa = initialize_db(self.loaded_file,"stuff", 4)
+
 
     
     def convchain(self, query):
         if not query:
             return {'user': "", 'bot': ""}
-
-        result = self.qa({"question": query, "chat_history": self.chat_history})
+        
+        formatted_query = format_response_with_template(query)
+        result = self.qa({"question": formatted_query, "chat_history": self.chat_history})
         self.chat_history.extend([(query, result["answer"])])
         self.db_query = result["generated_question"]
         self.db_response = result["source_documents"]
         self.answer = result['answer'] 
-
+        
         return {'user': query, 'bot': self.answer}
 
 
 load_dotenv(".env")
 
-cb = cbfs()
+
+from flask_cors import CORS
 
 app = Flask(__name__)
+CORS(app, resources={r"/*": {"origins": "*"}})  
+
 
 @app.route('/', methods=['GET'])
 def home():
@@ -137,24 +110,20 @@ def home():
 
 @app.route('/api/convchain', methods=['POST'])
 def convchain():
-    data = request.get_json()
-    query = data.get('query')
-    if not query:
-        return jsonify({'error': 'No query provided'}), 400
-    result = cb.convchain(query)
-    print(result)
-    return jsonify(result)
+    try:
+        data = request.get_json()
+        query = data.get('query')
+        if not query:
+            return jsonify({'error': 'No query provided'}), 400
+        result = cb.convchain(query)
+        print(result)
+        return jsonify(result)
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({'error': 'Internal server error'}), 500
 
-@app.route('/api/load_db', methods=['POST'])
-def load_db():
-    data = request.get_json()
-    file = data.get('file')
-    chain_type = data.get('chain_type')
-    k = data.get('k')
-    if not all([file, chain_type, k]):
-        return jsonify({'error': 'Missing parameters'}), 400
-    result = cb.load_db(file, chain_type, k)
-    return jsonify(result)
+
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    cb = cbfs()
+    app.run(debug=True, use_reloader=False)
